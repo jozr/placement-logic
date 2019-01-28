@@ -8,7 +8,6 @@ const levels = unique(statements.map(({ level }) => level));
 const avg = arr => arr.reduce((sum, v) => sum + v, 0) / arr.length;
 
 const calculateResultLevel = confidenceMap => {
-  console.log('confidenceMap',)
   const sortedConfidenceMaps = Object.keys(confidenceMap)
     .sort()
     .reverse();
@@ -31,7 +30,8 @@ class App extends Component {
       questionsAsked: [],
       previousLevels: [],
       currentLevel: null,
-      confidenceMap: {}
+      confidenceMap: {},
+      isEnd: false
     };
     this.getInitialQuestionChoices = this.getInitialQuestionChoices.bind(this);
     this.getChoices = this.getChoices.bind(this);
@@ -41,6 +41,7 @@ class App extends Component {
   }
 
   defaultGetCanDo(level) {
+    if (this.state.isEnd) return;
     const statementsByLevel = statements.reduce(
       (obj, statement) => ({
         ...obj,
@@ -64,10 +65,11 @@ class App extends Component {
   }
 
   handleNextLevel(event) {
+    if (this.state.isEnd) return;
     const { id } = event.target;
     const idInt = parseInt(id);
     const { currentLevel } = this.state;
-    let resultLevel;
+    let resultLevel = currentLevel;
     const isSecondNeedPracticeInARow = () => {
       if (idInt !== 2 || this.state.questionsAsked.length === 0) {
         return false;
@@ -77,19 +79,26 @@ class App extends Component {
       ];
       return answer === 2 && currentLevel === level;
     };
-    if (this.state.questionsAsked.length >= 5) {
-      return calculateResultLevel({
-        ...this.state.confidenceMap,
-        [currentLevel]: [...(this.state.confidenceMap[currentLevel] || []), idInt]
-      })
+    const answerTexts = this.state.questionsAsked.map(questionAsked => questionAsked.answerText);
+    // fix this...
+    if (answerTexts.length >= 3 && answerTexts.slice(1).slice(-3).every(val => val === "Don't know" )) {
+      this.setState({ isEnd: true })
+    } else {
+      if (this.state.questionsAsked.length >= 5) {
+        resultLevel = calculateResultLevel({
+          ...this.state.confidenceMap,
+          [currentLevel]: [...(this.state.confidenceMap[currentLevel] || []), idInt]
+        })
+        this.setState({ isEnd: true })
+      }
+      if (idInt > 2) {
+        resultLevel = Math.min(levels.length - 1, currentLevel + 1);
+      }
+      if (idInt < 2 || isSecondNeedPracticeInARow()) {
+        resultLevel = Math.max(0, currentLevel - 1);
+      }
     }
-    if (idInt > 2) {
-      resultLevel = Math.min(levels.length - 1, currentLevel + 1);
-    }
-    if (idInt < 2 || isSecondNeedPracticeInARow()) {
-      resultLevel = Math.max(0, currentLevel - 1);
-    }
-  
+
     this.setState({
       questionsAsked: [
         ...this.state.questionsAsked,
@@ -154,12 +163,15 @@ class App extends Component {
   }
 
   render() {
-    console.log('this.state', this.state);
     return (
       <div>
         <h3>Step by Step placement</h3>
         <p>{this.state.initialQuestion ? "How much previous knowledge do you have of Spanish?" : this.defaultGetCanDo(this.state.currentLevel)}</p>
         {this.state.initialQuestion ? this.getInitialQuestionChoices() : this.getChoices()}
+        <br />
+        <h3>Current level: {levels[this.state.currentLevel]}</h3>
+        <p></p>
+        <p>{this.state.isEnd && "That's the end!"}</p>
       </div>
     );
   }
