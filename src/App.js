@@ -84,7 +84,8 @@ class App extends Component {
     if (answerTexts.length >= 3 && answerTexts.slice(1).slice(-3).every(val => val === "Don't know" )) {
       this.setState({ isEnd: true })
     } else {
-      if (this.state.questionsAsked.length >= 5) {
+      if (this.state.questionsAsked.length >= 4) {
+        console.log('>= 4')
         resultLevel = calculateResultLevel({
           ...this.state.confidenceMap,
           [currentLevel]: [...(this.state.confidenceMap[currentLevel] || []), idInt]
@@ -103,20 +104,21 @@ class App extends Component {
       questionsAsked: [
         ...this.state.questionsAsked,
         {
-          question: this.defaultGetCanDo(this.state.currentLevel),
+          question: this.state.nextQuestion,
           answer: idInt,
           answerText: this.getSliderChoices()[idInt],
           level: currentLevel,
         },
       ],
-      currentLevel: resultLevel,
+      currentLevel: parseInt(resultLevel),
       confidenceMap: {
         ...this.state.confidenceMap,
         [currentLevel]: [
           ...(this.state.confidenceMap[currentLevel] || []),
           idInt
         ]
-      }
+      },
+      nextQuestion: this.defaultGetCanDo(currentLevel),
     });
   }
 
@@ -129,6 +131,7 @@ class App extends Component {
     const currentLevel = levels.indexOf(
       selectedSplitLevels[Math.floor(selectedSplitLevels.length / 2)]
     );
+    console.log('currentLevel', currentLevel)
     this.setState({
       questionsAsked: [
         ...this.state.questionsAsked,
@@ -138,8 +141,9 @@ class App extends Component {
           answerText: ["a little", "a lot"][idInt]
         },
       ],
-      currentLevel,
+      currentLevel: currentLevel,
       initialQuestion: false,
+      nextQuestion: this.defaultGetCanDo(currentLevel),
     });
   }
 
@@ -163,10 +167,12 @@ class App extends Component {
   }
 
   render() {
+    console.log(this.state)
     return (
       <div>
         <h3>Step by Step placement</h3>
-        <p>{this.state.initialQuestion ? "How much previous knowledge do you have of Spanish?" : this.defaultGetCanDo(this.state.currentLevel)}</p>
+        <h3>{!this.state.isEnd && `Question #${this.state.questionsAsked.length + 1}`}</h3>
+        <p>{!this.state.isEnd && (this.state.initialQuestion ? "How much previous knowledge do you have of Spanish?" : this.state.nextQuestion)}</p>
         {this.state.initialQuestion ? this.getInitialQuestionChoices() : this.getChoices()}
         <br />
         <h3>Current level: {levels[this.state.currentLevel]}</h3>
